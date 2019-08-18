@@ -91,38 +91,58 @@ class DecisionTree2(val columnLabels: List<String>/*, val minLeafs: Int = 1, val
      */
     private fun build() {
 
-        trainedData.map { it.value. } }
+        //if (isBuilt) return
 
-    // Don't check if it's built here
-    isBuilt = true
-}
+        trainedData.map { it.value. }
 
-private fun bestSplitFor(inputs: List<DoubleArray>) {
-
-    var bestGain = 0
-
-    var bestQuestion = null
-
-    var currentUncertainty = Impurity.GINI(inputs)
-
-    inputs.forEachIndexed { column, values ->
-
-        val (trueRows, falseRows) = values.toSet().partition { column >= it }
-
-        if (trueRows.isEmpty() || falseRows.isEmpty()) {
-            return@forEachIndexed
-        }
-
-        val gain =
-
+        // Don't check if it's built here
+        // Use isTrained instead
+        //isBuilt = true
     }
 
-}
 
-private fun infoGain(trueRows: List<Double>, falseRows: List<Double>, uncertainty: Double): Double {
-    val score = trueRows.size / (trueRows.size + falseRows.size)
-    return uncertainty - score * Impurity.GINI(listOf(trueRows.toDoubleArray())) - (1 - score) * Impurity.GINI(listOf(falseRows.toDoubleArray()))
-}
+    private fun bestSplitFor(inputs: List<DoubleArray>): Pair<Double, Question?> {
+
+        var bestGain = 0.0
+
+        var bestQuestion: Question? = null
+
+        val uncertainty = Impurity.GINI(inputs)
+
+
+        inputs.forEachIndexed { column, values ->
+
+            values.forEach { value ->
+
+                val question = Question(column, value)
+
+                val (trueRows, falseRows) = values.toSet().partition { column >= it }
+
+                if (trueRows.isEmpty() || falseRows.isEmpty()) {
+                    return@forEachIndexed
+                }
+
+                val gain = infoGain(trueRows, falseRows, uncertainty)
+
+                if (gain >= bestGain) {
+                    bestGain = gain
+                    bestQuestion = question
+                }
+            }
+
+        }
+
+
+        return bestGain to bestQuestion
+    }
+
+    /**
+     * Use [partition] to call this
+     */
+    private fun infoGain(trueRows: List<Double>, falseRows: List<Double>, uncertainty: Double): Double {
+        val score = trueRows.size / (trueRows.size + falseRows.size)
+        return uncertainty - score * Impurity.GINI(listOf(trueRows.toDoubleArray())) - (1 - score) * Impurity.GINI(listOf(falseRows.toDoubleArray()))
+    }
 
 
 /*
@@ -149,62 +169,78 @@ enum class Question(val operator: String, vararg val compareResults: Int) {
 
 }*/
 
-/**
- * Gets the unique values for a column
- *
- * @param rows
- * @param column
- * @return
- */
-private fun uniqueValues(rows: List<DoubleArray>, column: Int): Set<Double> {
-    return rows.map { it[column] }.toSet()
-}
+    /**
+     * Gets the unique values for a column
+     *
+     * @param rows
+     * @param column
+     * @return
+     */
+    private fun uniqueValues(rows: List<DoubleArray>, column: Int): Set<Double> {
+        return rows.map { it[column] }.toSet()
+    }
 
-private fun classCounts(data: Map<String, List<String>>): Map<String, Int> {
-    return data.map { it.key to it.value.size }.toMap()
-}
+    /**
+     * TODO
+     *
+     * @param data
+     * @return
+     */
+    private fun classCounts(data: Map<String, List<String>>): Map<String, Int> {
+        return data.map { it.key to it.value.size }.toMap()
+    }
 
-private fun partition(rows: Map<String, List<String>>, question: Question): Pair<List<List<String>>, List<List<String>>> {
-    return rows.values.partition { question.match(it) }
-}
+    /**
+     *
+     *
+     * @param rows
+     * @param question
+     * @return
+     */
+    private fun partition(rows: Map<String, List<Double>>, question: Question): Pair<List<List<Double>>, List<List<Double>>> {
+        return rows.values.partition { question.match(it) }
+    }
 
-/**
- * TODO
- *
- * @property column
- * @property value
- */
-data class Question(val column: Int, val value: String) {
 
-    fun match(example: List<String>): Boolean {
 
-        value.toDoubleOrNull()?.let {
-            return example[column] >= value
+    /**
+     * TODO
+     *
+     * @property column
+     * @property value
+     */
+    data class Question(val column: Int, val value: Double) {
+
+        fun match(example: List<Double>): Boolean {
+
+            /*value.toDoubleOrNull()?.let {
+                return example[column] >= value
+            }*/
+
+            return example[column] == value
         }
 
-        return example[column] == value
     }
+
+
+    data class Leaf(override val value: DoubleArray) : NodeBase<DoubleArray> {
+
+        override fun equals(other: Any?): Boolean {
+
+            if (this === other) return true
+
+            if (other !is Leaf || !value.contentEquals(other.value)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            return value.contentHashCode()
+        }
+    }
+
+
+    data class Node(override val value: Question, val trueBranch: NodeBase<Any>, val falseBranch: NodeBase<Any>) : NodeBase<Question>
+
 
 }
-
-
-data class Leaf(override val value: DoubleArray) : NodeBase<DoubleArray> {
-
-    override fun equals(other: Any?): Boolean {
-
-        if (this === other) return true
-
-        if (other !is Leaf || !value.contentEquals(other.value)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return value.contentHashCode()
-    }
-}
-
-
-data class Node(override val value: Question, val trueBranch: NodeBase<Any>, val falseBranch: NodeBase<Any>) : NodeBase<Question>
-
-
