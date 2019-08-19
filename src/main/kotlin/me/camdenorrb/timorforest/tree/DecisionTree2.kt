@@ -1,14 +1,15 @@
 package me.camdenorrb.timorforest.tree
 
+import me.camdenorrb.timorforest.ext.partition
 import me.camdenorrb.timorforest.node.base.NodeBase
 
 class DecisionTree2(val columnLabels: List<String>/*, val minLeafs: Int = 1, val maxNodes: Int = 100*/) {
 
     // TODO: Find what the root value should be
-    //private val root = Node(columnLabels)
+    private lateinit var root: Node
 
     // (Type --> Values)
-    private val trainedData = mutableMapOf<String, MutableList<DoubleArray>>()
+    private val trainedData = mutableMapOf<String, MutableList<List<Double>>>()
 
     var isBuilt = false
         private set
@@ -52,21 +53,25 @@ class DecisionTree2(val columnLabels: List<String>/*, val minLeafs: Int = 1, val
      * @param inputs Declares the input values (Type --> Values)
      * //@param outputs Declares the [outputs] for these [inputs]
      */
-    fun train(inputs: Map<String, DoubleArray>) {
+    fun train(inputs: Map<String, List<Double>>) {
 
         // Early fail if invalid input size
         check(inputs.values.none { it.size != columnLabels.size }) {
             "The amount of values needs to equal the amount of [columnLabels]"
         }
 
-        inputs.forEach { (type, data) ->
-            trainedData.getOrPut(type, { mutableListOf() }).add(data)
+        val flatInputs = inputs.values.flatten()
+
+        val (gain, question) = bestSplitFor(flatInputs)
+
+        if (gain == 0.0 || question == null) {
+            root = Node(question, Leaf(trueRows), Leaf(falseRows))
+            return
         }
 
-        // TODO: Use sets to remove duplicates
-        // TODO: Add all the data to the rootNode
+        val (trueRows, falseRows) = partition(inputs, question)
 
-        build()
+        root = Node(question, Leaf(trueRows), Leaf(falseRows))
     }
 
     /**
@@ -78,6 +83,7 @@ class DecisionTree2(val columnLabels: List<String>/*, val minLeafs: Int = 1, val
      */
     fun predict(inputs: DoubleArray): String {
 
+        is
         check(isBuilt) {
             "The tree has to be built in order to predict, please train data"
         }
@@ -89,25 +95,18 @@ class DecisionTree2(val columnLabels: List<String>/*, val minLeafs: Int = 1, val
     /**
      * Builds the root node for the tree, needs to be called before use
      */
-    private fun build() {
+    private fun build(inputs: Map<String, List<Double>>): Node {
 
-        //if (isBuilt) return
-
-        trainedData.map { it.value. }
-
-        // Don't check if it's built here
-        // Use isTrained instead
-        //isBuilt = true
     }
 
 
-    private fun bestSplitFor(inputs: List<DoubleArray>): Pair<Double, Question?> {
+    private fun bestSplitFor(vararg inputs: List<Double>): Pair<Double, Question?> {
 
         var bestGain = 0.0
 
         var bestQuestion: Question? = null
 
-        val uncertainty = Impurity.GINI(inputs)
+        val uncertainty = Impurity.GINI(*inputs)
 
 
         inputs.forEachIndexed { column, values ->
@@ -141,7 +140,7 @@ class DecisionTree2(val columnLabels: List<String>/*, val minLeafs: Int = 1, val
      */
     private fun infoGain(trueRows: List<Double>, falseRows: List<Double>, uncertainty: Double): Double {
         val score = trueRows.size / (trueRows.size + falseRows.size)
-        return uncertainty - score * Impurity.GINI(listOf(trueRows.toDoubleArray())) - (1 - score) * Impurity.GINI(listOf(falseRows.toDoubleArray()))
+        return uncertainty - score * Impurity.GINI(trueRows) - (1 - score) * Impurity.GINI(falseRows)
     }
 
 
@@ -197,10 +196,9 @@ enum class Question(val operator: String, vararg val compareResults: Int) {
      * @param question
      * @return
      */
-    private fun partition(rows: Map<String, List<Double>>, question: Question): Pair<List<List<Double>>, List<List<Double>>> {
-        return rows.values.partition { question.match(it) }
+    private fun partition(rows: Map<String, List<Double>>, question: Question): Pair<Map<String, List<Double>>, Map<String, List<Double>>> {
+        return rows.partition { question.match(this.value) }
     }
-
 
 
     /**
@@ -223,24 +221,8 @@ enum class Question(val operator: String, vararg val compareResults: Int) {
     }
 
 
-    data class Leaf(override val value: DoubleArray) : NodeBase<DoubleArray> {
+    data class Leaf(override val value: Map<String, List<Double>>) : NodeBase<Map<String, List<Double>>>
 
-        override fun equals(other: Any?): Boolean {
-
-            if (this === other) return true
-
-            if (other !is Leaf || !value.contentEquals(other.value)) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            return value.contentHashCode()
-        }
-    }
-
-
-    data class Node(override val value: Question, val trueBranch: NodeBase<Any>, val falseBranch: NodeBase<Any>) : NodeBase<Question>
-
+    data class Node(override val value: Question, val trueBranch: NodeBase<out Any>, val falseBranch: NodeBase<out Any>) : NodeBase<Question>
 
 }
