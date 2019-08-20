@@ -33,6 +33,7 @@ class DecisionTree(val columnLabels: List<String>, val minLeafs: Int = 1, val ma
         }
 
     // The weights for all the columnLabels
+    // Between [0, 1]
     var weights = List(columnLabels.size) { 1.0 }
         set(value) {
 

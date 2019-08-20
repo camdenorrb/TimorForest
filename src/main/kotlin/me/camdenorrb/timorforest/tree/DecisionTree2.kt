@@ -55,6 +55,8 @@ class DecisionTree2(val columnLabels: List<String>/*, val minLeafs: Int = 1, val
      */
     fun train(inputs: Map<String, List<Double>>) {
 
+        // TODO: isTrained
+
         // Early fail if invalid input size
         check(inputs.values.none { it.size != columnLabels.size }) {
             "The amount of values needs to equal the amount of [columnLabels]"
@@ -65,8 +67,7 @@ class DecisionTree2(val columnLabels: List<String>/*, val minLeafs: Int = 1, val
         val (gain, question) = bestSplitFor(flatInputs)
 
         if (gain == 0.0 || question == null) {
-            root = Node(question, Leaf(trueRows), Leaf(falseRows))
-            return
+            error("Wtf?")
         }
 
         val (trueRows, falseRows) = partition(inputs, question)
@@ -83,7 +84,6 @@ class DecisionTree2(val columnLabels: List<String>/*, val minLeafs: Int = 1, val
      */
     fun predict(inputs: DoubleArray): String {
 
-        is
         check(isBuilt) {
             "The tree has to be built in order to predict, please train data"
         }
@@ -95,9 +95,10 @@ class DecisionTree2(val columnLabels: List<String>/*, val minLeafs: Int = 1, val
     /**
      * Builds the root node for the tree, needs to be called before use
      */
+    /*
     private fun build(inputs: Map<String, List<Double>>): Node {
 
-    }
+    }*/
 
 
     private fun bestSplitFor(vararg inputs: List<Double>): Pair<Double, Question?> {
