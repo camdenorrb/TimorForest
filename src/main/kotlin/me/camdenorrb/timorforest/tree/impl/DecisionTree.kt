@@ -1,4 +1,4 @@
-package me.camdenorrb.timorforest.tree
+package me.camdenorrb.timorforest.tree.impl
 
 import kotlin.math.pow
 
@@ -131,7 +131,7 @@ private fun bestSplitFor(inputs: List<DoubleArray>): Double {
     return bestGain
 }*/
 
-private fun infoGain(trueRows: List<Double>, falseRows: List<Double>, uncertainty: Double): Double {
+private fun infoGain(trueRows: List<List<Double>>, falseRows: List<List<Double>>, uncertainty: Double): Double {
     val score = trueRows.size / (trueRows.size + falseRows.size)
     return uncertainty - score * Impurity.GINI(trueRows) - (1 - score) * Impurity.GINI(falseRows)
 }
@@ -142,7 +142,7 @@ enum class Impurity {
 
     GINI {
 
-        override fun invoke(vararg inputs: List<Double>): Double {
+        override fun invoke(inputs: List<List<Double>>): Double {
 
             var impurity = 1.0
 
@@ -161,7 +161,7 @@ enum class Impurity {
     };
 
 
-    internal abstract operator fun invoke(vararg inputs: List<Double>): Double
+    internal abstract operator fun invoke(inputs: List<List<Double>>): Double
 
 }
 
