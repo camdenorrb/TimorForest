@@ -56,7 +56,7 @@ class DecisionTree {
 
         val (gain, question) = bestSplitFor(inputs)
 
-        if (gain == 0.0) {
+        if (gain == 0.0 || question == null) {
             return Leaf(inputs.flatten().map { "$it" })
         }
 
@@ -69,7 +69,7 @@ class DecisionTree {
         return Node(question, trueBranch, falseBranch)
     }
 
-    private fun bestSplitFor(inputs: List<List<Comparable<*>>>): Pair<Double, Question> {
+    private fun bestSplitFor(inputs: List<List<Comparable<*>>>): Pair<Double, Question?> {
 
         var bestGain = 0.0
 
@@ -77,11 +77,9 @@ class DecisionTree {
 
         val uncertainty = Impurity.GINI(inputs)
 
+        inputs.indices.map { index -> inputs.map { it[index] }.toSet() }.forEachIndexed { column, values ->
 
-        inputs.forEachIndexed { column, values ->
-
-            // toSet to remove duplicates
-            values.toSet().forEach { value ->
+            values.forEach { value ->
 
                 val question = Question(column, value)
 
@@ -98,11 +96,9 @@ class DecisionTree {
                     bestQuestion = question
                 }
             }
-
         }
 
-
-        return bestGain to bestQuestion!!
+        return bestGain to bestQuestion
     }
 
     /**
@@ -136,11 +132,13 @@ class DecisionTree {
 
         fun match(example: List<Comparable<*>>): Boolean {
 
+            val exampleValue = example.getOrNull(column) ?: return false
+
             if (value is Number) {
-                return (example[column] as Number).toDouble() >= value.toDouble()
+                return (exampleValue as Number).toDouble() >= value.toDouble()
             }
 
-            return example[column] == value
+            return exampleValue == value
         }
 
     }

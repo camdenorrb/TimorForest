@@ -1,33 +1,33 @@
 package me.camdenorrb.timorforest.tree
 
-class DecisionTreeTest {
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 
-    /*
+internal class DecisionTreeTest {
+
+    val tree = DecisionTree()
+
+
+    @BeforeTest
+    fun make() {
+
+        val data = listOf<List<Comparable<*>>>(
+            listOf("Black", 2, "Cat"),
+            listOf("Brown", 3, "Duck"),
+            listOf("White", 4, "Dog")
+        )
+
+        tree.train(data)
+    }
+
     @Test
-    fun testQuestions() {
+    fun test() {
+        println(tree.predict(listOf("Brown", 2)))
+    }
 
-        // Check operators
-        assertTrue { "$IS_LESS_THAN" == "<" }
-        assertTrue { "$IS_EQUAL_OR_LESS_THAN" == "<=" }
-        assertTrue { "$IS_EQUAL_TO" == "=="}
-        assertTrue { "$IS_EQUAL_OR_GREATER_THAN" == ">="}
-        assertTrue { "$IS_GREATER_THAN" == ">"}
-
-        // Normal test
-        assertTrue { checkIf(0, IS_LESS_THAN, 1) }
-        assertTrue { checkIf(0, IS_EQUAL_OR_LESS_THAN, 1) }
-        assertTrue { checkIf(1, IS_EQUAL_OR_LESS_THAN, 1) }
-        assertTrue { checkIf(1, IS_EQUAL_TO, 1) }
-        assertTrue { checkIf(1, IS_EQUAL_OR_GREATER_THAN, 1) }
-        assertTrue { checkIf(1, IS_EQUAL_OR_GREATER_THAN, 0) }
-        assertTrue { checkIf(1, IS_GREATER_THAN, 0) }
-
-        // Negated test
-        assertTrue { !checkIf(1, IS_LESS_THAN, 0) }
-        assertTrue { !checkIf(1, IS_EQUAL_OR_LESS_THAN, 0) }
-        assertTrue { !checkIf(0, IS_EQUAL_TO, 1) }
-        assertTrue { !checkIf(0, IS_EQUAL_OR_GREATER_THAN, 1) }
-        assertTrue { !checkIf(0, IS_GREATER_THAN, 1) }
-    }*/
+    @AfterTest
+    fun clean() {
+    }
 
 }
