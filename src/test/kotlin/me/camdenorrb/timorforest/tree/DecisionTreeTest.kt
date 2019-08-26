@@ -19,6 +19,8 @@ internal class DecisionTreeTest {
         )
 
         tree.train(data)
+
+        println(tree)
     }
 
     @Test

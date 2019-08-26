@@ -144,6 +144,23 @@ class DecisionTree {
     }
 
 
+    private fun prettyText(node: NodeBase<*>, indent: String = ""): String {
+        return when(node) {
+
+            is Leaf -> "Predict: ${node.value}".prependIndent(indent)
+            is Node -> {
+                "${node.value} \n--> True: \n${prettyText(node.trueBranch, "$indent  ")} \n--> False: \n${prettyText(node.falseBranch, "$indent  ")}".prependIndent(indent)
+            }
+
+            else -> error("Unknown node type!")
+        }
+    }
+
+    override fun toString(): String {
+        return prettyText(root)
+    }
+
+
     data class Leaf(override val value: List<String>) : NodeBase<List<String>>
 
     data class Node(override val value: Question, val trueBranch: NodeBase<*>, val falseBranch: NodeBase<*>) : NodeBase<Question>
