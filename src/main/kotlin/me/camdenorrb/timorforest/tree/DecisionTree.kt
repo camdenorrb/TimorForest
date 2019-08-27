@@ -1,42 +1,147 @@
 package me.camdenorrb.timorforest.tree
 
-import me.camdenorrb.timorforest.ext.partition
 import me.camdenorrb.timorforest.node.base.NodeBase
 import kotlin.math.pow
 
-// TODO: Change comparable to string, you can use .toDoubleOrNull to determine if it's a number
-class DecisionTree {
+class DecisionTree(val header: List<String>, val trainingData: List<List<Any>>) {
 
-    private lateinit var root: NodeBase<*>
-
-    var isTrained = false
-        private set
+    var root: NodeBase<*>
 
 
-    /**
-     * Trains the decision tree with fortune and knowledge!
-     *
-     * @param inputs Declares the input values [[value, value, label]]
-     */
-    fun train(inputs: List<List<Comparable<*>>>) {
-
-        check(!isTrained) {
-            "This decision tree has already been trained!"
-        }
-
-        root = buildTree(inputs)
-
-        isTrained = true
+    init {
+        root = buildTree(trainingData)
     }
 
-    /**
-     * Attempts to predict the label for the [row]
-     *
-     * @param row Declares the row of information to inspect
-     *
-     * @return The label the tree suspects
-     */
+
+    fun uniqueVals(rows: List<List<Any>>, column: Int): Set<Any> {
+        return rows.map { it[column] }.toSet()
+    }
+
+    fun classCounts(rows: List<List<Any>>): MutableMap<Any, Int> {
+
+        val labelCount = mutableMapOf<Any, Int>()
+
+        rows.forEach {
+            val label = it.last()
+            labelCount[label] = labelCount.getOrDefault(label, 0) + 1
+        }
+
+        return labelCount
+    }
+
+    inner class Question(val column: Int, val value: Any) {
+
+        fun match(example: List<Any>): Boolean {
+
+            val exampleValue = example[column]
+
+            return if (value is Number) {
+                (exampleValue as Number).toInt() >= value.toInt()
+            }
+            else {
+                value == exampleValue
+            }
+
+        }
+
+        override fun toString(): String {
+            val condition = if (value is Number) ">=" else "=="
+            return "Is ${header[column]} $condition $value"
+        }
+
+    }
+
+    fun partition(rows: List<List<Any>>, question: Question): Pair<List<List<Any>>, List<List<Any>>> {
+        return rows.partition { question.match(it) }
+    }
+
+    fun gini(rows: List<List<Any>>): Double {
+
+        val counts = classCounts(rows)
+        var impurity = 1.0
+
+        counts.forEach { lbl, count ->
+            val probOfLbl = count / rows.size.toDouble()
+            impurity -= probOfLbl.pow(2)
+        }
+
+        return impurity
+    }
+
+    fun infoGain(left: List<List<Any>>, right: List<List<Any>>, uncertainty: Double): Double {
+        val p = left.size.toDouble() / (left.size + right.size)
+        return uncertainty - p * gini(left) - (1 - p) * gini(right)
+    }
+
+    fun findBestSplit(rows: List<List<Any>>): Pair<Double, Question?> {
+
+        var bestGain = 0.0
+        var bestQuestion: Question? = null
+        val uncertainty = gini(rows)
+        val nFeatures = rows[0].size - 1
+
+        for (col in 0 until nFeatures) {
+
+            rows.map { it[col] }.toSet().forEach { value ->
+
+                val question = Question(col, value)
+
+                val (trueRows, falseRows) = partition(rows, question)
+
+                if (trueRows.isEmpty() || falseRows.isEmpty()) {
+                    return@forEach
+                }
+
+                val gain = infoGain(trueRows, falseRows, uncertainty)
+
+                if (gain >= bestGain) {
+                    bestGain = gain
+                    bestQuestion = question
+                }
+            }
+
+        }
+
+        return bestGain to bestQuestion
+    }
+
+
+    private fun buildTree(inputs: List<List<Any>>): NodeBase<*> {
+
+        val (gain, question) = findBestSplit(inputs)
+
+        if (gain == 0.0 || question == null) {
+            return Leaf(classCounts(inputs))
+        }
+
+        val (trueRows, falseRows) = partition(inputs, question)
+
+        val trueBranch = buildTree(trueRows)
+
+        val falseBranch = buildTree(falseRows)
+
+        return Node(question, trueBranch, falseBranch)
+    }
+
+    /*
     fun predict(row: List<Comparable<*>>): Leaf {
+
+        var node = root
+
+        while (true) {
+
+            when(node) {
+
+                is Leaf -> return node
+                is Node -> node = if (node.value.match(row)) node.trueBranch else node.falseBranch
+
+                else -> error("Invalid node type ${node::class.simpleName}")
+            }
+
+        }
+    }*/
+
+    fun predict(row: List<Any>): Leaf {
 
         var node = root
 
@@ -53,117 +158,6 @@ class DecisionTree {
         }
     }
 
-
-    private fun buildTree(inputs: List<List<Comparable<*>>>): NodeBase<*> {
-
-        val (gain, question) = findBestSplit(inputs)
-
-        if (gain == 0.0) {
-            return Leaf(countLabels(inputs))
-        }
-
-        val (trueRows, falseRows) = partition(inputs, question)
-
-        val trueBranch = buildTree(trueRows)
-
-        val falseBranch = buildTree(falseRows)
-
-        return Node(question, trueBranch, falseBranch)
-    }
-
-    private fun findBestSplit(inputs: List<List<Comparable<*>>>): Pair<Double, Question> {
-
-        var bestGain = 0.0
-
-        var bestQuestion: Question? = null
-
-        val uncertainty = gini(inputs)
-
-
-        // toSet to avoid duplicates
-        val columns = (0..inputs[0].size - 2).map { index -> inputs.map { it[index] }.toSet() }
-
-        columns.forEachIndexed { column, values ->
-
-            println(values)
-
-            values.forEach { value ->
-
-                val question = Question(column, value)
-
-                val (trueRows, falseRows) = partition(inputs, question)
-
-                if (trueRows.isEmpty() || falseRows.isEmpty()) {
-                    return@forEachIndexed
-                }
-
-                val gain = infoGain(trueRows, falseRows, uncertainty)
-
-                if (gain >= bestGain) {
-                    bestGain = gain
-                    bestQuestion = question
-                }
-            }
-        }
-
-        return bestGain to bestQuestion!!
-    }
-
-    private fun countLabels(rows: List<List<Comparable<*>>>): Map<Comparable<*>, Int> {
-
-        val labelCount = mutableMapOf<Comparable<*>, Int>()
-
-        rows.forEach {
-            val last = it.last()
-            labelCount[last] = labelCount.getOrDefault(last, 0) + 1
-        }
-
-        return labelCount
-    }
-
-    /**
-     * Use [partition] to call this
-     */
-    private fun infoGain(trueRows: List<List<Comparable<*>>>, falseRows: List<List<Comparable<*>>>, uncertainty: Double): Double {
-        val score = trueRows.size.toDouble() / (trueRows.size + falseRows.size)
-        return uncertainty - score * gini(trueRows) - (1 - score) * gini(falseRows)
-    }
-
-
-    /**
-     *
-     *
-     * @param rows
-     * @param question
-     * @return
-     */
-    private fun partition(rows: List<List<Comparable<*>>>, question: Question?): Pair<List<List<Comparable<*>>>, List<List<Comparable<*>>>> {
-        return rows.partition { question?.match(it) ?: false }
-    }
-
-
-    /**
-     * TODO
-     *
-     * @property column
-     * @property value
-     */
-    data class Question(val column: Int, val value: Comparable<*>) {
-
-        fun match(example: List<Comparable<*>>): Boolean {
-
-            val exampleValue = example[column]
-
-            if (value is Number) {
-                return (exampleValue as Number).toDouble() >= value.toDouble()
-            }
-
-            return exampleValue == value
-        }
-
-    }
-
-
     private fun prettyText(node: NodeBase<*>, indent: String = ""): String {
         return when(node) {
 
@@ -174,29 +168,12 @@ class DecisionTree {
         }
     }
 
-    private fun gini(rows: List<List<Comparable<*>>>): Double {
-
-        var impurity = 1.0
-
-        val labelCount = countLabels(rows)
-
-        val rowSize = rows.size.toDouble()
-
-        labelCount.forEach { (_, count) ->
-            val probOfLabel = count / rowSize
-            impurity -= probOfLabel.pow(2.0)
-        }
-
-        return impurity
-    }
-
-
     override fun toString(): String {
         return prettyText(root)
     }
 
 
-    data class Leaf(override val value: Map<Comparable<*>, Int>) : NodeBase<Map<Comparable<*>, Int>>
+    data class Leaf(override val value: Map<Any, Int>) : NodeBase<Map<Any, Int>>
 
     data class Node(override val value: Question, val trueBranch: NodeBase<*>, val falseBranch: NodeBase<*>) : NodeBase<Question>
 
