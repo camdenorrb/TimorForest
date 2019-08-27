@@ -56,9 +56,9 @@ class DecisionTree {
 
     private fun buildTree(inputs: List<List<Comparable<*>>>): NodeBase<*> {
 
-        val (gain, question) = bestSplitFor(inputs)
+        val (gain, question) = findBestSplit(inputs)
 
-        if (gain == 0.0 || question == null) {
+        if (gain == 0.0) {
             return Leaf(countLabels(inputs))
         }
 
@@ -71,7 +71,7 @@ class DecisionTree {
         return Node(question, trueBranch, falseBranch)
     }
 
-    private fun bestSplitFor(inputs: List<List<Comparable<*>>>): Pair<Double, Question?> {
+    private fun findBestSplit(inputs: List<List<Comparable<*>>>): Pair<Double, Question> {
 
         var bestGain = 0.0
 
@@ -79,10 +79,13 @@ class DecisionTree {
 
         val uncertainty = gini(inputs)
 
+
         // toSet to avoid duplicates
-        val columns = inputs.indices.map { index -> inputs.map { it[index] }.toSet() }
+        val columns = (0..inputs[0].size - 2).map { index -> inputs.map { it[index] }.toSet() }
 
         columns.forEachIndexed { column, values ->
+
+            println(values)
 
             values.forEach { value ->
 
@@ -103,7 +106,7 @@ class DecisionTree {
             }
         }
 
-        return bestGain to bestQuestion
+        return bestGain to bestQuestion!!
     }
 
     private fun countLabels(rows: List<List<Comparable<*>>>): Map<Comparable<*>, Int> {
@@ -122,7 +125,7 @@ class DecisionTree {
      * Use [partition] to call this
      */
     private fun infoGain(trueRows: List<List<Comparable<*>>>, falseRows: List<List<Comparable<*>>>, uncertainty: Double): Double {
-        val score = trueRows.size / (trueRows.size + falseRows.size)
+        val score = trueRows.size.toDouble() / (trueRows.size + falseRows.size)
         return uncertainty - score * gini(trueRows) - (1 - score) * gini(falseRows)
     }
 
@@ -134,8 +137,8 @@ class DecisionTree {
      * @param question
      * @return
      */
-    private fun partition(rows: List<List<Comparable<*>>>, question: Question): Pair<List<List<Comparable<*>>>, List<List<Comparable<*>>>> {
-        return rows.partition { question.match(it) }
+    private fun partition(rows: List<List<Comparable<*>>>, question: Question?): Pair<List<List<Comparable<*>>>, List<List<Comparable<*>>>> {
+        return rows.partition { question?.match(it) ?: false }
     }
 
 
@@ -149,7 +152,7 @@ class DecisionTree {
 
         fun match(example: List<Comparable<*>>): Boolean {
 
-            val exampleValue = example.getOrNull(column) ?: return false
+            val exampleValue = example[column]
 
             if (value is Number) {
                 return (exampleValue as Number).toDouble() >= value.toDouble()

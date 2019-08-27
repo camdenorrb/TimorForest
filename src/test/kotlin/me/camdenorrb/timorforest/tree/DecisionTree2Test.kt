@@ -4,9 +4,9 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
-internal class DecisionTreeTest {
+internal class DecisionTree2Test {
 
-    val tree = DecisionTree()
+    val tree = DecisionTree2()
 
 
     @BeforeTest
