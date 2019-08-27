@@ -25,7 +25,7 @@ internal class DecisionTreeTest {
 
     @Test
     fun test() {
-        println(tree.predict(listOf("Brown", 2)))
+        println(tree.predict(listOf("White", 4)))
     }
 
     @AfterTest

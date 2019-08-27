@@ -4,6 +4,7 @@ import me.camdenorrb.timorforest.ext.partition
 import me.camdenorrb.timorforest.node.base.NodeBase
 import kotlin.math.pow
 
+// TODO: Change comparable to string, you can use .toDoubleOrNull to determine if it's a number
 class DecisionTree {
 
     private lateinit var root: NodeBase<*>
@@ -24,6 +25,7 @@ class DecisionTree {
         }
 
         root = buildTree(inputs)
+
         isTrained = true
     }
 
@@ -34,7 +36,7 @@ class DecisionTree {
      *
      * @return The label the tree suspects
      */
-    fun predict(row: List<Comparable<*>>): List<String> {
+    fun predict(row: List<Comparable<*>>): Leaf {
 
         var node = root
 
@@ -42,7 +44,7 @@ class DecisionTree {
 
             when(node) {
 
-                is Leaf -> return node.value
+                is Leaf -> return node
                 is Node -> node = if (node.value.match(row)) node.trueBranch else node.falseBranch
 
                 else -> error("Invalid node type ${node::class.simpleName}")
@@ -57,7 +59,7 @@ class DecisionTree {
         val (gain, question) = bestSplitFor(inputs)
 
         if (gain == 0.0 || question == null) {
-            return Leaf(inputs.flatten().map { "$it" })
+            return Leaf(countLabels(inputs))
         }
 
         val (trueRows, falseRows) = partition(inputs, question)
@@ -75,9 +77,12 @@ class DecisionTree {
 
         var bestQuestion: Question? = null
 
-        val uncertainty = Impurity.GINI(inputs)
+        val uncertainty = gini(inputs)
 
-        inputs.indices.map { index -> inputs.map { it[index] }.toSet() }.forEachIndexed { column, values ->
+        // toSet to avoid duplicates
+        val columns = inputs.indices.map { index -> inputs.map { it[index] }.toSet() }
+
+        columns.forEachIndexed { column, values ->
 
             values.forEach { value ->
 
@@ -101,12 +106,24 @@ class DecisionTree {
         return bestGain to bestQuestion
     }
 
+    private fun countLabels(rows: List<List<Comparable<*>>>): Map<Comparable<*>, Int> {
+
+        val labelCount = mutableMapOf<Comparable<*>, Int>()
+
+        rows.forEach {
+            val last = it.last()
+            labelCount[last] = labelCount.getOrDefault(last, 0) + 1
+        }
+
+        return labelCount
+    }
+
     /**
      * Use [partition] to call this
      */
     private fun infoGain(trueRows: List<List<Comparable<*>>>, falseRows: List<List<Comparable<*>>>, uncertainty: Double): Double {
         val score = trueRows.size / (trueRows.size + falseRows.size)
-        return uncertainty - score * Impurity.GINI(trueRows) - (1 - score) * Impurity.GINI(falseRows)
+        return uncertainty - score * gini(trueRows) - (1 - score) * gini(falseRows)
     }
 
 
@@ -148,50 +165,36 @@ class DecisionTree {
         return when(node) {
 
             is Leaf -> "Predict: ${node.value}".prependIndent(indent)
-            is Node -> {
-                "${node.value} \n--> True: \n${prettyText(node.trueBranch, "$indent  ")} \n--> False: \n${prettyText(node.falseBranch, "$indent  ")}".prependIndent(indent)
-            }
+            is Node -> "${node.value} \n--> True: \n${prettyText(node.trueBranch, "$indent  ")} \n--> False: \n${prettyText(node.falseBranch, "$indent  ")}".prependIndent(indent)
 
             else -> error("Unknown node type!")
         }
     }
+
+    private fun gini(rows: List<List<Comparable<*>>>): Double {
+
+        var impurity = 1.0
+
+        val labelCount = countLabels(rows)
+
+        val rowSize = rows.size.toDouble()
+
+        labelCount.forEach { (_, count) ->
+            val probOfLabel = count / rowSize
+            impurity -= probOfLabel.pow(2.0)
+        }
+
+        return impurity
+    }
+
 
     override fun toString(): String {
         return prettyText(root)
     }
 
 
-    data class Leaf(override val value: List<String>) : NodeBase<List<String>>
+    data class Leaf(override val value: Map<Comparable<*>, Int>) : NodeBase<Map<Comparable<*>, Int>>
 
     data class Node(override val value: Question, val trueBranch: NodeBase<*>, val falseBranch: NodeBase<*>) : NodeBase<Question>
-
-
-    // Types used to calculate impurity for a list of rows
-    enum class Impurity {
-
-        GINI {
-
-            override fun invoke(inputs: List<List<Comparable<*>>>): Double {
-
-                var impurity = 1.0
-
-                val rowSize = inputs.size
-
-                val labelSizes = inputs.map { it.size.toDouble() }
-
-                labelSizes.forEach { size ->
-                    val probOfLabel = size / rowSize // Should be the same?
-                    impurity -= probOfLabel.pow(2.0)
-                }
-
-                return impurity
-            }
-
-        };
-
-
-        abstract operator fun invoke(inputs: List<List<Comparable<*>>>): Double
-
-    }
 
 }
