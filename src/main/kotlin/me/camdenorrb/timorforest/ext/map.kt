@@ -1,7 +1,7 @@
 package me.camdenorrb.timorforest.ext
 
 
-inline fun <K, V> Map<K, V>.partition(block: Map.Entry<K, V>.() -> Boolean): Pair<Map<K, V>, Map<K, V>> {
+internal inline fun <K, V> Map<K, V>.partition(block: Map.Entry<K, V>.() -> Boolean): Pair<Map<K, V>, Map<K, V>> {
 
     val map1 = mutableMapOf<K, V>()
     val map2 = mutableMapOf<K, V>()
