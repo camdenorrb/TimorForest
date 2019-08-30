@@ -13,10 +13,6 @@ class DecisionTree(val header: List<String>, val trainingData: List<List<Any>>) 
     }
 
 
-    fun uniqueVals(rows: List<List<Any>>, column: Int): Set<Any> {
-        return rows.map { it[column] }.toSet()
-    }
-
     fun classCounts(rows: List<List<Any>>): MutableMap<Any, Int> {
 
         val labelCount = mutableMapOf<Any, Int>()
@@ -51,9 +47,6 @@ class DecisionTree(val header: List<String>, val trainingData: List<List<Any>>) 
 
     }
 
-    fun partition(rows: List<List<Any>>, question: Question): Pair<List<List<Any>>, List<List<Any>>> {
-        return rows.partition { question.match(it) }
-    }
 
     fun gini(rows: List<List<Any>>): Double {
 
@@ -86,7 +79,7 @@ class DecisionTree(val header: List<String>, val trainingData: List<List<Any>>) 
 
                 val question = Question(col, value)
 
-                val (trueRows, falseRows) = partition(rows, question)
+                val (trueRows, falseRows) = rows.partition { question.match(it) }
 
                 if (trueRows.isEmpty() || falseRows.isEmpty()) {
                     return@forEach
@@ -114,7 +107,7 @@ class DecisionTree(val header: List<String>, val trainingData: List<List<Any>>) 
             return Leaf(classCounts(inputs))
         }
 
-        val (trueRows, falseRows) = partition(inputs, question)
+        val (trueRows, falseRows) = inputs.partition { question.match(it) }
 
         val trueBranch = buildTree(trueRows)
 

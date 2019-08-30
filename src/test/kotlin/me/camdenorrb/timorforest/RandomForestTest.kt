@@ -1,12 +1,12 @@
-package me.camdenorrb.timorforest.tree
+package me.camdenorrb.timorforest
 
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
-internal class DecisionTreeTest {
+internal class RandomForestTest {
 
-    private lateinit var tree: DecisionTree
+    private val forest = RandomForest.Classifier(0.5, 1000, listOf("Color", "Age", "Label"))
 
 
     @BeforeTest
@@ -14,19 +14,20 @@ internal class DecisionTreeTest {
 
         val data = listOf(
             listOf("Black", 2, "Cat"),
+            listOf("Black", 2, "Cat"),
             listOf("Brown", 2, "Duck"),
+            listOf("Brown", 2, "Duck"),
+            listOf("White", 4, "Dog"),
             listOf("White", 4, "Dog")
             // listOf("White", 5, "Cat")
         )
 
-        tree = DecisionTree(listOf("Color", "Age", "Label"), data)
-
-        println(tree)
+        forest.train(data)
     }
 
     @Test
     fun test() {
-        println(tree.predict(listOf("White", 4)))
+        println(forest.predict(listOf("White", 4)))
     }
 
     @AfterTest
